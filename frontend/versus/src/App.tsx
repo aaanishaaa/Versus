@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react'
-import { RegisterForm, LoginForm } from './AuthForms'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { Navbar } from './Navbar'
+import { HomePage } from './HomePage'
+import { AuthPage } from './AuthPage'
+import { Dashboard } from './Dashboard'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
-  const [apiStatus, setApiStatus] = useState<string>('Testing...')
   const [currentUser, setCurrentUser] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login')
+  const [currentPage, setCurrentPage] = useState<string>('home')
+  const [apiStatus, setApiStatus] = useState<string>('Testing...')
 
   // Test API connection
   useEffect(() => {
@@ -23,110 +23,115 @@ function App() {
     }
     
     testAPI()
+
+    // Check if user is already logged in
+    const token = localStorage.getItem('token')
+    if (token) {
+      // You could verify the token here with the backend
+      // For now, we'll assume it's valid
+    }
   }, [])
 
   const handleAuthSuccess = (data: any) => {
     setCurrentUser(data.user || data)
+    setCurrentPage('dashboard')
   }
 
   const handleLogout = () => {
     localStorage.removeItem('token')
     setCurrentUser(null)
+    setCurrentPage('home')
     alert('Logged out successfully!')
   }
 
-  const testProfileAPI = async () => {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      alert('Please login first!')
-      return
-    }
+  const handleNavigate = (page: string) => {
+    setCurrentPage(page)
+  }
 
-    try {
-      const response = await fetch('/api/auth/profile', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      })
-      
-      const data = await response.json()
-      
-      if (response.ok) {
-        alert(`Profile data: ${JSON.stringify(data, null, 2)}`)
-      } else {
-        alert(`Error: ${data.msg}`)
-      }
-    } catch (error) {
-      alert('Network error while fetching profile')
+  const renderCurrentPage = () => {
+    switch (currentPage) {
+      case 'home':
+        return <HomePage currentUser={currentUser} onNavigate={handleNavigate} />
+      case 'auth':
+        return <AuthPage onAuthSuccess={handleAuthSuccess} />
+      case 'dashboard':
+        return currentUser ? <Dashboard currentUser={currentUser} onNavigate={handleNavigate} /> : <AuthPage onAuthSuccess={handleAuthSuccess} />
+      case 'profile':
+        return currentUser ? (
+          <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', textAlign: 'center' }}>
+            <h1>Profile Page</h1>
+            <p>Coming soon! Your profile and detailed stats will be here.</p>
+            <div style={{ 
+              padding: '20px', 
+              backgroundColor: '#f8f9fa', 
+              borderRadius: '10px',
+              marginTop: '20px'
+            }}>
+              <h3>Current User Info:</h3>
+              <p><strong>Username:</strong> {currentUser.username}</p>
+              <p><strong>Email:</strong> {currentUser.email}</p>
+              <p><strong>Rating:</strong> {currentUser.rating}</p>
+              <p><strong>Matches:</strong> {currentUser.matchHistory?.length || 0}</p>
+            </div>
+          </div>
+        ) : <AuthPage onAuthSuccess={handleAuthSuccess} />
+      case 'matches':
+        return currentUser ? (
+          <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', textAlign: 'center' }}>
+            <h1>Match History</h1>
+            <p>Coming soon! Your match history and detailed game statistics will be here.</p>
+            <div style={{ 
+              padding: '20px', 
+              backgroundColor: '#f8f9fa', 
+              borderRadius: '10px',
+              marginTop: '20px'
+            }}>
+              <h3>Recent Matches:</h3>
+              {currentUser.matchHistory && currentUser.matchHistory.length > 0 ? (
+                <ul>
+                  {currentUser.matchHistory.map((match: any, index: number) => (
+                    <li key={index}>
+                      vs {match.opponent} - {match.result} ({match.mode})
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No matches played yet. Start your first game!</p>
+              )}
+            </div>
+          </div>
+        ) : <AuthPage onAuthSuccess={handleAuthSuccess} />
+      default:
+        return <HomePage currentUser={currentUser} onNavigate={handleNavigate} />
     }
   }
 
   return (
-    <>
-      <div className="card">
-        {currentUser && (
-          <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#d4edda', border: '1px solid #c3e6cb', borderRadius: '5px' }}>
-            <h3>Welcome, {currentUser.username}!</h3>
-            <p>Email: {currentUser.email}</p>
-            <p>Rating: {currentUser.rating}</p>
-            <button 
-              onClick={testProfileAPI}
-              style={{ marginRight: '10px', padding: '5px 10px', backgroundColor: '#17a2b8', color: 'white', border: 'none', borderRadius: '3px' }}
-            >
-              Test Profile API
-            </button>
-            <button 
-              onClick={handleLogout}
-              style={{ padding: '5px 10px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '3px' }}
-            >
-              Logout
-            </button>
-          </div>
-        )}
-
-        {!currentUser && (
-          <div style={{ marginTop: '20px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <button 
-                onClick={() => setActiveTab('login')}
-                style={{ 
-                  marginRight: '10px', 
-                  padding: '10px 20px', 
-                  backgroundColor: activeTab === 'login' ? '#007bff' : '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px'
-                }}
-              >
-                Login
-              </button>
-              <button 
-                onClick={() => setActiveTab('register')}
-                style={{ 
-                  padding: '10px 20px', 
-                  backgroundColor: activeTab === 'register' ? '#007bff' : '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px'
-                }}
-              >
-                Register
-              </button>
-            </div>
-
-            {activeTab === 'login' ? (
-              <LoginForm onSuccess={handleAuthSuccess} />
-            ) : (
-              <RegisterForm onSuccess={handleAuthSuccess} />
-            )}
-          </div>
-        )}
-      </div>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <Navbar 
+        currentUser={currentUser} 
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        onLogout={handleLogout}
+      />
       
-      <p className="read-the-docs">
-        Test your authentication APIs above
-      </p>
-    </>
+      {/* API Status Indicator */}
+      <div style={{ 
+        position: 'fixed', 
+        bottom: '20px', 
+        right: '20px', 
+        padding: '10px 15px',
+        backgroundColor: apiStatus.includes('✅') ? '#d4edda' : '#f8d7da',
+        border: `1px solid ${apiStatus.includes('✅') ? '#c3e6cb' : '#f5c6cb'}`,
+        borderRadius: '5px',
+        fontSize: '0.9em',
+        zIndex: 1000
+      }}>
+        {apiStatus}
+      </div>
+
+      {renderCurrentPage()}
+    </div>
   )
 }
 
