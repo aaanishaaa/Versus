@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getToken, clearToken } from '../services/auth'
-import { disconnectSocket } from '../main.jsx'
+import { disconnectSocket } from '../socket.js'
 
 const LEAGUE_COLORS = {
   Bronze: 'bg-amber-700',

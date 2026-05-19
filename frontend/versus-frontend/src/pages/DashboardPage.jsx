@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { me } from '../services/api.js'
 import { clearToken, getToken } from '../services/auth.js'
-import { initSocket, disconnectSocket, socket } from '../main.jsx'
+import { initSocket, disconnectSocket, socket } from '../socket.js'
 
 function DashboardPage({ currentUser }) {
   const [loading, setLoading] = useState(!currentUser)
@@ -16,7 +16,12 @@ function DashboardPage({ currentUser }) {
   const [isReconnecting, setIsReconnecting] = useState(false)
   const countdownTimerRef = useRef(null)
   const reconnectTimerRef = useRef(null)
+  const matchStateRef = useRef(matchState)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    matchStateRef.current = matchState
+  }, [matchState])
 
   useEffect(() => {
     return () => {
@@ -69,6 +74,13 @@ function DashboardPage({ currentUser }) {
       setMatchState('searching')
       setQueueSize(payload.queueSize || 0)
       setNotice(payload.message || 'Searching for opponent...')
+    }
+
+    const handleQueueUpdated = (payload) => {
+      setQueueSize(payload.queueSize || 0)
+      if (payload.queueSize > 0 && matchStateRef.current === 'searching') {
+        setNotice(`Players in queue: ${payload.queueSize}`)
+      }
     }
 
     const handleMatchFound = (payload) => {
@@ -133,6 +145,7 @@ function DashboardPage({ currentUser }) {
     s.on('connect', handleConnect)
     s.on('disconnect', handleDisconnect)
     s.on('waiting', handleWaiting)
+    s.on('queue_updated', handleQueueUpdated)
     s.on('match_found', handleMatchFound)
     s.on('match_start', handleMatchStart)
     s.on('opponent_disconnected', handleOpponentDisconnected)
@@ -144,6 +157,7 @@ function DashboardPage({ currentUser }) {
       s.off('connect', handleConnect)
       s.off('disconnect', handleDisconnect)
       s.off('waiting', handleWaiting)
+      s.off('queue_updated', handleQueueUpdated)
       s.off('match_found', handleMatchFound)
       s.off('match_start', handleMatchStart)
       s.off('opponent_disconnected', handleOpponentDisconnected)
@@ -228,6 +242,18 @@ function DashboardPage({ currentUser }) {
                     %
                   </p>
                 </article>
+              </div>
+
+              <div className="mb-6 rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-400">Live queue</p>
+                  <p className="text-lg font-semibold text-white">
+                    {queueSize > 0 ? `${queueSize} player${queueSize === 1 ? '' : 's'} waiting` : 'No active queue'}
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-sm font-bold ${queueSize > 0 ? 'bg-green-500 text-white' : 'bg-slate-700 text-gray-300'}`}>
+                  {queueSize}
+                </span>
               </div>
 
               {matchState === 'idle' && (

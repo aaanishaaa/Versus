@@ -4,7 +4,7 @@ import Editor from '@monaco-editor/react'
 import confetti from 'canvas-confetti'
 import toast from 'react-hot-toast'
 import { getMatchResult } from '../services/api'
-import { socket } from '../main'
+import { socket } from '../socket.js'
 
 const LEAGUE_COLORS = {
   Bronze: 'bg-amber-700',

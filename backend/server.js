@@ -13,6 +13,9 @@ import { executeCode, find_match, calculateELO, getLeague } from './src/socket/u
 
 dotenv.config();
 
+// Ensure JUDGE0 API URL is available for health checks (may be provided via env)
+const JUDGE0_API_URL = process.env.JUDGE0_API_URL || 'http://localhost:2000/api/v2/execute'
+
 const app = express();
 const httpServer = createServer(app);
 const PORT = Number(process.env.PORT || 4000);
@@ -62,6 +65,12 @@ const removeFromQueue = (socketId) => {
     return true;
   }
   return false;
+};
+
+const broadcastQueueUpdate = () => {
+  io.emit('queue_updated', {
+    queueSize: matchmakingQueue.length,
+  });
 };
 
 const addUserSocket = (userId, socketId) => {
@@ -445,8 +454,11 @@ io.on('connection', (socket) => {
       queueSize: matchmakingQueue.length,
     });
 
+    broadcastQueueUpdate();
+
     try {
       await tryMatchPlayers();
+      broadcastQueueUpdate();
     } catch (error) {
       socket.emit('match_error', { message: 'Failed to create match', error: error.message });
     }
@@ -456,6 +468,7 @@ io.on('connection', (socket) => {
     const removed = removeFromQueue(socket.id);
     if (removed) {
       socket.emit('queue_left', { message: 'You left the queue' });
+      broadcastQueueUpdate();
     }
   });
 
@@ -561,9 +574,6 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', environment: process.env.NODE_ENV || 'development' })
 });
 
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', environment: process.env.NODE_ENV || 'development' })
-});
 
 app.get('/match/:matchId', authMiddleware, async (req, res) => {
   const { matchId } = req.params;

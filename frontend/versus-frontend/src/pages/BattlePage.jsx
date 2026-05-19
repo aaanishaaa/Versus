@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { giveUpMatch, getMatch, submitCode, getExecutionHealth } from '../services/api.js'
 import { getToken } from '../services/auth.js'
-import { socket, initSocket } from '../main.jsx'
+import { socket, initSocket } from '../socket.js'
 
 const MATCH_DURATION_SECONDS = 30 * 60
 
